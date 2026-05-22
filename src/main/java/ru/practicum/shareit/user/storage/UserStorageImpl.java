@@ -5,18 +5,22 @@ import ru.practicum.shareit.exception.EmailException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.madel.User;
 
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class UserStorageImpl  implements UserStorage {
     private final AtomicLong atomicLong;
     private final Map<Long, User> users;
+    private final Set<String> emails;
 
     public UserStorageImpl() {
-        this.users = new HashMap<>();
+        this.emails = new CopyOnWriteArraySet<>();
+        this.users = new ConcurrentHashMap<>();
         this.atomicLong = new AtomicLong();
     }
 
@@ -27,8 +31,8 @@ public class UserStorageImpl  implements UserStorage {
     }
 
     @Override
-    public Collection<User> getAll() {
-        return users.values();
+    public List<User> getAll() {
+        return users.values().stream().toList();
     }
 
     @Override
@@ -42,12 +46,13 @@ public class UserStorageImpl  implements UserStorage {
     @Override
     public User update(User user) {
         validateId(user.getId());
-        validateEmail(user);
         User oldUser = users.get(user.getId());
         if (user.getName() != null && !user.getName().isEmpty()) {
             oldUser.setName(user.getName());
         }
-        if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+        if (user.getEmail() != null && !user.getEmail().isEmpty()
+                && !oldUser.getEmail().equalsIgnoreCase(user.getEmail())) {
+            validateEmail(user);
             oldUser.setEmail(user.getEmail());
         }
         users.put(oldUser.getId(), oldUser);
@@ -56,7 +61,8 @@ public class UserStorageImpl  implements UserStorage {
 
     @Override
     public Boolean delete(Long id) {
-        users.remove(id);
+        User user = users.remove(id);
+        emails.remove(user.getEmail());
         return !users.containsKey(id);
     }
 
@@ -67,11 +73,7 @@ public class UserStorageImpl  implements UserStorage {
     }
 
     private void validateEmail(User user) {
-        if (users.values().stream()
-                .anyMatch(
-                        stored -> stored.getEmail().equalsIgnoreCase(user.getEmail())
-                                && !stored.getId().equals(user.getId())
-                )) {
+        if (!emails.add(user.getEmail())) {
             throw new EmailException("Пользователь с таким адресом Эл. почты " +
                     user.getEmail() + " уже существует!");
         }

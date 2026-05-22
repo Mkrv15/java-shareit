@@ -6,9 +6,6 @@ import lombok.Data;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.madel.User;
 
-/**
- * TODO Sprint add-controllers.
- */
 @Data
 public class Item {
     private Long id;
@@ -18,6 +15,7 @@ public class Item {
     private String description;
     @NotNull
     private Boolean available;
+    @NotNull
     private User owner;
     private ItemRequest request;
 }

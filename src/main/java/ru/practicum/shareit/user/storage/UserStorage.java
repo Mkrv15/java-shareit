@@ -2,12 +2,12 @@ package ru.practicum.shareit.user.storage;
 
 import ru.practicum.shareit.user.madel.User;
 
-import java.util.Collection;
+import java.util.List;
 
 public interface UserStorage {
     User get(Long id);
 
-    Collection<User> getAll();
+    List<User> getAll();
 
     User add(User user);
 

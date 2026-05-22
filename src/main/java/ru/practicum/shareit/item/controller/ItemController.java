@@ -3,24 +3,21 @@ package ru.practicum.shareit.item.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.constant.Headers;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.service.ItemService;
 
 import java.util.List;
 
-/**
- * TODO Sprint add-controllers.
- */
 @RestController
 @RequestMapping("/items")
 @RequiredArgsConstructor
 public class ItemController {
 
     private final ItemService itemService;
-    private final String userIdHeader = "X-Sharer-User-Id";
 
     @GetMapping
-    public List<ItemDto> findAll(@RequestHeader(userIdHeader) Long userId) {
+    public List<ItemDto> findAll(@RequestHeader(Headers.USER_ID_HEADER) Long userId) {
         return itemService.getAllItemsByUserId(userId);
     }
 
@@ -35,13 +32,13 @@ public class ItemController {
     }
 
     @PostMapping
-    public ItemDto createItem(@Valid @RequestBody ItemDto itemDto, @RequestHeader(userIdHeader) Long userId) {
+    public ItemDto createItem(@Valid @RequestBody ItemDto itemDto, @RequestHeader(Headers.USER_ID_HEADER) Long userId) {
         return itemService.createItem(itemDto, userId);
     }
 
     @PatchMapping("/{itemId}")
     public ItemDto updateItem(@RequestBody ItemDto itemDto, @PathVariable Long itemId,
-                              @RequestHeader(userIdHeader) Long userId) {
+                              @RequestHeader(Headers.USER_ID_HEADER) Long userId) {
         return itemService.updateItem(itemDto, itemId, userId);
     }
 

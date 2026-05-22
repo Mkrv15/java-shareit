@@ -3,7 +3,6 @@ package ru.practicum.shareit.item.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.exception.ValidationException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.mapper.ItemMapper;
 import ru.practicum.shareit.item.model.Item;
@@ -23,8 +22,9 @@ public class ItemService {
     private final UserStorage userStorage;
 
     public ItemDto getItem(Long id) {
-        itemIdValidator(itemStorage.getItem(id));
-        return ItemMapper.toItemDto(itemStorage.getItem(id));
+        Item item = itemStorage.getItem(id);
+        validateItemExists(item, id);
+        return ItemMapper.toItemDto(item);
     }
 
     public List<ItemDto> getAllItemsByUserId(Long userId) {
@@ -38,22 +38,29 @@ public class ItemService {
     public ItemDto createItem(ItemDto itemDto, Long userId) {
         Item newItem = ItemMapper.toItem(itemDto);
         User owner = userStorage.get(userId);
-        itemOwnerCheckValidator(owner, newItem, userId);
+        newItem.setOwner(owner);
+
         Item createdItem = itemStorage.createItem(newItem);
         return ItemMapper.toItemDto(createdItem);
     }
 
     public ItemDto updateItem(ItemDto itemDto, Long itemId, Long userId) {
-        Item item = ItemMapper.toItem(itemDto);
-        userIdValidator(userId);
+        validateUserExists(userId);
+
         Item oldItem = itemStorage.getItem(itemId);
-        itemOwnerNameDescAvailValidator(item, oldItem, userId);
-        Item changedItem = itemStorage.updateItem(oldItem);
-        return ItemMapper.toItemDto(changedItem);
+        validateItemExists(oldItem, itemId);
+        validateItemOwner(oldItem, userId);
+
+        Item sourceItem = ItemMapper.toItem(itemDto);
+        ItemMapper.updateItemFields(sourceItem, oldItem);
+
+        Item updatedItem = itemStorage.updateItem(oldItem);
+        return ItemMapper.toItemDto(updatedItem);
     }
 
     public void removeItem(Long id) {
-        itemIdValidator(itemStorage.getItem(id));
+        Item item = itemStorage.getItem(id);
+        validateItemExists(item, id);
         itemStorage.removeItem(id);
     }
 
@@ -69,44 +76,23 @@ public class ItemService {
         return Collections.emptyList();
     }
 
-    private void itemIdValidator(Item item) {
-        if (!itemStorage.getAllItems().contains(itemStorage.getItem(item.getId()))) {
-            throw new NotFoundException("Вещь с id " + item.getId() + " не найдена");
-        }
-        if (item.getName().isBlank()) {
-            throw new ValidationException("Имя не может быть пустым");
-        }
-        if (item.getDescription().isBlank()) {
-            throw new ValidationException("Описание не может быть пустым");
-        }
-    }
-
-    private void itemOwnerCheckValidator(User owner, Item newItem, long id) {
-        if (owner == null) {
-            throw new NotFoundException(String.format("Пользователь с id=%d не найден", id));
-        } else {
-            newItem.setOwner(owner);
-        }
-    }
-
-    private void itemOwnerNameDescAvailValidator(Item item, Item oldItem, long userId) {
-        if (oldItem.getOwner().getId() != userId) {
-            throw new NotFoundException("Пользователь не является владельцем данного товара!");
-        }
-        if (item.getName() != null) {
-            oldItem.setName(item.getName());
-        }
-        if (item.getDescription() != null) {
-            oldItem.setDescription(item.getDescription());
-        }
-        if (item.getAvailable() != null) {
-            oldItem.setAvailable(item.getAvailable());
-        }
-    }
-
-    private void userIdValidator(Long userId) {
-        if (!userStorage.getAll().contains(userStorage.get(userId))) {
+    private User validateUserExists(Long userId) {
+        User user = userStorage.get(userId);
+        if (user == null) {
             throw new NotFoundException(String.format("Пользователь с id = %d не найден.", userId));
+        }
+        return user;
+    }
+
+    private void validateItemExists(Item item, Long itemId) {
+        if (item == null) {
+            throw new NotFoundException(String.format("Вещь с id %d не найдена", itemId));
+        }
+    }
+
+    private void validateItemOwner(Item item, Long userId) {
+        if (item.getOwner() == null || !item.getOwner().getId().equals(userId)) {
+            throw new NotFoundException("Пользователь не является владельцем данного товара!");
         }
     }
 }
