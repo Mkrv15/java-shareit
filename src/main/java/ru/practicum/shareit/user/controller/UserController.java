@@ -14,29 +14,28 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
 
-    @GetMapping("{id}")
-    public UserDto getUserById(@PathVariable Long id) {
-        return userService.get(id);
+    @PostMapping
+    public UserDto addUser(@Valid @RequestBody UserDto userDto) {
+        return userService.addUser(userDto);
+    }
+
+    @GetMapping("{userId}")
+    public UserDto getUserById(@PathVariable long userId) {
+        return userService.getUser(userId);
     }
 
     @GetMapping
     public List<UserDto> getAllUsers() {
-        return userService.getAll();
+        return userService.getAllUsers();
     }
 
-    @PostMapping
-    public UserDto create(@Valid @RequestBody UserDto userDto) {
-        return userService.add(userDto);
+    @PatchMapping("{userId}")
+    public UserDto updateUser(@PathVariable Long userId, @RequestBody UserDto userDto) {
+        return userService.updateUser(userId, userDto);
     }
 
-    @PatchMapping("/{userId}")
-    public UserDto update(@RequestBody UserDto userDto,
-                          @PathVariable Long userId) {
-        return userService.update(userDto, userId);
-    }
-
-    @DeleteMapping("{id}")
-    public void delete(@PathVariable Long id) {
-        userService.delete(id);
+    @DeleteMapping("{userId}")
+    public void removeUser(@PathVariable long userId) {
+        userService.removeUser(userId);
     }
 }
