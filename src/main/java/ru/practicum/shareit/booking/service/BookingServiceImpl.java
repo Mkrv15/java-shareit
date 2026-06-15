@@ -13,7 +13,8 @@ import ru.practicum.shareit.booking.model.State;
 import ru.practicum.shareit.booking.model.Status;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.booking.strategy.BookingStrategyContext;
-import ru.practicum.shareit.booking.strategy.impl.*;
+import ru.practicum.shareit.booking.strategy.BookingStrategyFactory;
+import ru.practicum.shareit.booking.strategy.OwnerBookingStrategyFactory;
 import ru.practicum.shareit.exception.AccessException;
 import ru.practicum.shareit.exception.ItemNotAvailableForBookingException;
 import ru.practicum.shareit.exception.NotFoundException;
@@ -31,11 +32,15 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private final BookingStrategyContext context;
+    private final BookingStrategyContext bookerStrategyContext;
+    private final BookingStrategyContext ownerStrategyContext;
     private final ItemRepository itemRepository;
     private final UserService userService;
     private final BookingMapper bookingMapper;
     private final BookingRepository bookingRepository;
+    private final BookingStrategyFactory bookerStrategyFactory;
+    private final OwnerBookingStrategyFactory ownerStrategyFactory;
+
 
     @Override
     public BookingDto addBooking(long bookerId, BookingInputDto bookingInputDto) {
@@ -99,27 +104,8 @@ public class BookingServiceImpl implements BookingService {
         User booker = userService.getUserById(bookerId);
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
 
-        switch (state) {
-            case WAITING:
-                context.setStrategy(new WaitingBookingStrategy(bookingRepository));
-                break;
-            case REJECTED:
-                context.setStrategy(new RejectedBookingStrategy(bookingRepository));
-                break;
-            case PAST:
-                context.setStrategy(new PastBookingStrategy(bookingRepository));
-                break;
-            case FUTURE:
-                context.setStrategy(new FutureBookingStrategy(bookingRepository));
-                break;
-            case CURRENT:
-                context.setStrategy(new CurrentBookingStrategy(bookingRepository));
-                break;
-            default:
-                context.setStrategy(new AllBookingStrategy(bookingRepository));
-                break;
-        }
-        List<Booking> bookings = context.executeStrategy(booker.getId(), sort);
+        bookerStrategyContext.setStrategy(bookerStrategyFactory.getStrategy(state));
+        List<Booking> bookings = bookerStrategyContext.executeStrategy(booker.getId(), sort);
 
         return bookings.stream()
                 .map(bookingMapper::convertToDto)
@@ -131,31 +117,10 @@ public class BookingServiceImpl implements BookingService {
     public List<BookingDto> getBookingsOfOwner(State state, long ownerId) {
         User owner = userService.getUserById(ownerId);
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
-        List<Booking> bookings;
-        switch (state) {
-            case WAITING:
-                bookings = bookingRepository.findAllByOwnerIdAndStatus(owner.getId(),
-                        Status.WAITING, sort);
-                break;
-            case REJECTED:
-                bookings = bookingRepository.findAllByOwnerIdAndStatus(owner.getId(),
-                        Status.REJECTED, sort);
-                break;
-            case PAST:
-                bookings = bookingRepository.findAllByOwnerIdAndEndBefore(owner.getId(),
-                        LocalDateTime.now(), sort);
-                break;
-            case FUTURE:
-                bookings = bookingRepository.findAllByOwnerIdAndStartAfter(owner.getId(),
-                        LocalDateTime.now(), sort);
-                break;
-            case CURRENT:
-                bookings = bookingRepository.findAllByOwnerIdAndStartBeforeAndEndAfter(owner.getId(),
-                        LocalDateTime.now(), sort);
-                break;
-            default:
-                bookings = bookingRepository.findAllByOwnerId(owner.getId(), sort);
-        }
+
+        ownerStrategyContext.setStrategy(ownerStrategyFactory.getStrategy(state));
+        List<Booking> bookings = ownerStrategyContext.executeStrategy(owner.getId(), sort);
+
         return bookings.stream()
                 .map(bookingMapper::convertToDto)
                 .collect(Collectors.toList());
