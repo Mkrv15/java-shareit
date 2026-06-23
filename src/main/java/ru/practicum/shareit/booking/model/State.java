@@ -5,11 +5,11 @@ import ru.practicum.shareit.exception.ValidationException;
 public enum State {
     ALL, CURRENT, PAST, FUTURE, WAITING, REJECTED;
 
-    public static State convert(String source) {
+    public static State parse(String raw) {
         try {
-            return State.valueOf(source);
+            return valueOf(raw.toUpperCase());
         } catch (Exception e) {
-            String message = String.format("Unknown state: %S", source);
+            String message = String.format("Unknown state: %S", raw);
             throw new ValidationException(message);
         }
     }

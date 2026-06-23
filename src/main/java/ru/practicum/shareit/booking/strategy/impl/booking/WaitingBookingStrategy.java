@@ -1,22 +1,28 @@
 package ru.practicum.shareit.booking.strategy.impl.booking;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.model.Booking;
+import ru.practicum.shareit.booking.model.State;
 import ru.practicum.shareit.booking.model.Status;
 import ru.practicum.shareit.booking.repository.BookingRepository;
-import ru.practicum.shareit.booking.strategy.BookingFetchStrategy;
 
 import java.util.List;
 
-public class WaitingBookingStrategy implements BookingFetchStrategy {
+@Component
+@RequiredArgsConstructor
+public class WaitingBookingStrategy implements BookerBookingFetchStrategy {
     private final BookingRepository bookingRepository;
 
-    public WaitingBookingStrategy(BookingRepository bookingRepository) {
-        this.bookingRepository = bookingRepository;
+    @Override
+    public State getState() {
+        return State.WAITING;
     }
 
     @Override
-    public List<Booking> execute(Long bookerId, Sort sort) {
-        return bookingRepository.findAllByBookerIdAndStatus(bookerId, Status.WAITING, sort);
+    public List<Booking> findBookings(Long bookerId, Sort sort) {
+        return bookingRepository.findAllByBookerIdAndStatus(
+                bookerId, Status.WAITING, sort);
     }
 }

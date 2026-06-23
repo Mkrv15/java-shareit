@@ -2,31 +2,31 @@ package ru.practicum.shareit.booking.strategy;
 
 import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.model.State;
-import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.booking.strategy.impl.booking.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class BookingStrategyFactory {
-    private final BookingRepository bookingRepository;
+    private final Map<State, BookerBookingFetchStrategy> strategies;
 
-    public BookingStrategyFactory(BookingRepository bookingRepository) {
-        this.bookingRepository = bookingRepository;
+    public BookingStrategyFactory(List<BookerBookingFetchStrategy> strategyList) {
+        this.strategies = strategyList.stream()
+                .collect(Collectors.toMap(
+                        BookingFetchStrategy::getState,
+                        Function.identity()
+                ));
     }
 
     public BookingFetchStrategy getStrategy(State state) {
-        switch (state) {
-            case WAITING:
-                return new WaitingBookingStrategy(bookingRepository);
-            case REJECTED:
-                return new RejectedBookingStrategy(bookingRepository);
-            case PAST:
-                return new PastBookingStrategy(bookingRepository);
-            case FUTURE:
-                return new FutureBookingStrategy(bookingRepository);
-            case CURRENT:
-                return new CurrentBookingStrategy(bookingRepository);
-            default:
-                return new AllBookingStrategy(bookingRepository);
+        BookingFetchStrategy strategy = strategies.get(state);
+        if (strategy == null) {
+            throw new IllegalArgumentException("Booking strategy for state " + state + " is not registered");
         }
+        return strategy;
     }
 }
+

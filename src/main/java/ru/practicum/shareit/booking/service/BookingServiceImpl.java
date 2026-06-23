@@ -12,7 +12,6 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.State;
 import ru.practicum.shareit.booking.model.Status;
 import ru.practicum.shareit.booking.repository.BookingRepository;
-import ru.practicum.shareit.booking.strategy.BookingStrategyContext;
 import ru.practicum.shareit.booking.strategy.BookingStrategyFactory;
 import ru.practicum.shareit.booking.strategy.OwnerBookingStrategyFactory;
 import ru.practicum.shareit.exception.AccessException;
@@ -32,8 +31,6 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private final BookingStrategyContext bookerStrategyContext;
-    private final BookingStrategyContext ownerStrategyContext;
     private final ItemRepository itemRepository;
     private final UserService userService;
     private final BookingMapper bookingMapper;
@@ -104,8 +101,8 @@ public class BookingServiceImpl implements BookingService {
         User booker = userService.getUserById(bookerId);
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
 
-        bookerStrategyContext.setStrategy(bookerStrategyFactory.getStrategy(state));
-        List<Booking> bookings = bookerStrategyContext.executeStrategy(booker.getId(), sort);
+        var strategy = bookerStrategyFactory.getStrategy(state);
+        List<Booking> bookings = strategy.findBookings(booker.getId(), sort);
 
         return bookings.stream()
                 .map(bookingMapper::convertToDto)
@@ -118,8 +115,8 @@ public class BookingServiceImpl implements BookingService {
         User owner = userService.getUserById(ownerId);
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
 
-        ownerStrategyContext.setStrategy(ownerStrategyFactory.getStrategy(state));
-        List<Booking> bookings = ownerStrategyContext.executeStrategy(owner.getId(), sort);
+        var strategy = ownerStrategyFactory.getStrategy(state);
+        List<Booking> bookings = strategy.findBookings(owner.getId(), sort);
 
         return bookings.stream()
                 .map(bookingMapper::convertToDto)

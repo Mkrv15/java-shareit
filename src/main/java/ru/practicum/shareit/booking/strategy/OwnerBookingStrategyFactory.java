@@ -1,31 +1,35 @@
 package ru.practicum.shareit.booking.strategy;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.model.State;
-import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.booking.strategy.impl.owner.*;
 
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 @Component
-@RequiredArgsConstructor
 public class OwnerBookingStrategyFactory {
 
-    private final BookingRepository bookingRepository;
+    private final Map<State, OwnerBookingFetchStrategy> strategies;
 
-    public BookingFetchStrategy getStrategy(State state) {
-        switch (state) {
-            case WAITING:
-                return new OwnerWaitingBookingStrategy(bookingRepository);
-            case REJECTED:
-                return new OwnerRejectedBookingStrategy(bookingRepository);
-            case PAST:
-                return new OwnerPastBookingStrategy(bookingRepository);
-            case FUTURE:
-                return new OwnerFutureBookingStrategy(bookingRepository);
-            case CURRENT:
-                return new OwnerCurrentBookingStrategy(bookingRepository);
-            default:
-                return new OwnerAllBookingStrategy(bookingRepository);
+    public OwnerBookingStrategyFactory(List<OwnerBookingFetchStrategy> strategyList) {
+        this.strategies = strategyList.stream()
+                .collect(Collectors.toMap(
+                        OwnerBookingFetchStrategy::getState,
+                        Function.identity(),
+                        (existing, replacement) -> existing,
+                        () -> new EnumMap<>(State.class)
+                ));
+    }
+
+    public OwnerBookingFetchStrategy getStrategy(State state) {
+        OwnerBookingFetchStrategy strategy = strategies.get(state);
+        if (strategy == null) {
+            throw new IllegalArgumentException("Owner booking strategy for state " + state + " is not registered");
         }
+        return strategy;
     }
 }
