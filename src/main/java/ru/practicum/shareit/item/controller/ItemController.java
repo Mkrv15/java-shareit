@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.constant.Headers;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.service.ItemService;
 
@@ -16,34 +17,39 @@ public class ItemController {
 
     private final ItemService itemService;
 
-    @GetMapping
-    public List<ItemDto> findAll(@RequestHeader(Headers.USER_ID_HEADER) Long userId) {
-        return itemService.getAllItemsByUserId(userId);
+    @PostMapping
+    public ItemDto addItem(@RequestHeader(Headers.USER_ID_HEADER) long userId, @Valid @RequestBody ItemDto itemDto) {
+        return itemService.addItem(userId, itemDto);
     }
 
-    @GetMapping("/{itemId}")
-    public ItemDto getItem(@PathVariable Long itemId) {
-        return itemService.getItem(itemId);
+    @GetMapping("{itemId}")
+    public ItemDto getItem(@PathVariable long itemId, @RequestHeader(Headers.USER_ID_HEADER) long userId) {
+        return itemService.getItemById(itemId, userId);
+    }
+
+    @GetMapping
+    public List<ItemDto> getAllItems(@RequestHeader(Headers.USER_ID_HEADER) long userId) {
+        return itemService.getAllItems(userId);
     }
 
     @GetMapping("/search")
-    public List<ItemDto> searchItems(@RequestParam(name = "text") String text) {
-        return itemService.searchItemsByDescription(text);
+    public List<ItemDto> searchItems(@RequestParam String text) {
+        return itemService.searchItems(text);
     }
 
-    @PostMapping
-    public ItemDto createItem(@Valid @RequestBody ItemDto itemDto, @RequestHeader(Headers.USER_ID_HEADER) Long userId) {
-        return itemService.createItem(itemDto, userId);
+    @PatchMapping("{itemId}")
+    public ItemDto updateItem(@RequestHeader(Headers.USER_ID_HEADER) long userId, @PathVariable long itemId, @RequestBody ItemDto itemDto) {
+        return itemService.updateItem(userId, itemId, itemDto);
     }
 
-    @PatchMapping("/{itemId}")
-    public ItemDto updateItem(@RequestBody ItemDto itemDto, @PathVariable Long itemId,
-                              @RequestHeader(Headers.USER_ID_HEADER) Long userId) {
-        return itemService.updateItem(itemDto, itemId, userId);
+    @DeleteMapping("{itemId}")
+    public void removeItem(@RequestHeader(Headers.USER_ID_HEADER) long userId, @PathVariable long itemId) {
+        itemService.removeItem(userId, itemId);
     }
 
-    @DeleteMapping("/{itemId}")
-    public void removeItem(@PathVariable Long itemId) {
-        itemService.removeItem(itemId);
+    @PostMapping("/{itemId}/comment")
+    public CommentDto addComment(@RequestHeader(Headers.USER_ID_HEADER) long userId, @PathVariable long itemId,
+                                 @RequestBody @Valid CommentDto commentDto) {
+        return itemService.addComment(userId, itemId, commentDto);
     }
 }

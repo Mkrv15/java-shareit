@@ -25,4 +25,10 @@ public class ErrorHandler {
     public ErrorResponse handleValidationException(final EmailException e) {
         return new ErrorResponse(e.getMessage());
     }
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleAccessException(final AccessException e) {
+        return new ErrorResponse(e.getMessage());
+    }
 }
