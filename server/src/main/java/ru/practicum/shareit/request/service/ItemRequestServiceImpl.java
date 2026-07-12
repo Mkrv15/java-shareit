@@ -19,7 +19,9 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -49,8 +51,18 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
         List<ItemRequest> itemRequests = requests.findAllByRequesterId(requesterId, pageable);
 
+        if (itemRequests.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> requestIds = itemRequests.stream()
+                .map(ItemRequest::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, List<ItemDataForRequestDto>> itemsByRequestId = getItemsGroupedByRequestId(requestIds);
+
         return itemRequests.stream()
-                .map(this::buildResponseWithItems)
+                .map(request -> buildResponseWithItems(request, itemsByRequestId))
                 .collect(Collectors.toList());
     }
 
@@ -61,8 +73,20 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         }
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "created"));
         Page<ItemRequest> page = requests.findAllByRequesterIdNot(requesterId, pageable);
-        return page.getContent().stream()
-                .map(this::buildResponseWithItems)
+        List<ItemRequest> itemRequests = page.getContent();
+
+        if (itemRequests.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> requestIds = itemRequests.stream()
+                .map(ItemRequest::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, List<ItemDataForRequestDto>> itemsByRequestId = getItemsGroupedByRequestId(requestIds);
+
+        return itemRequests.stream()
+                .map(request -> buildResponseWithItems(request, itemsByRequestId))
                 .collect(Collectors.toList());
     }
 
@@ -73,25 +97,40 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         }
         ItemRequest request = requests.findById(requestId).orElseThrow(
                 () -> new NotFoundException("Запроса с id = " + requestId + " нет"));
-        return buildResponseWithItems(request);
+
+        List<Long> requestIds = List.of(requestId);
+        Map<Long, List<ItemDataForRequestDto>> itemsByRequestId = getItemsGroupedByRequestId(requestIds);
+
+        return buildResponseWithItems(request, itemsByRequestId);
     }
 
-    private RequestDtoResponseWithMD buildResponseWithItems(ItemRequest request) {
-        List<ItemDataForRequestDto> items = itemRepository.findByRequestId(request.getId())
+    private Map<Long, List<ItemDataForRequestDto>> getItemsGroupedByRequestId(List<Long> requestIds) {
+        return itemRepository.findByRequestIdIn(requestIds)
                 .stream()
                 .map(item -> ItemDataForRequestDto.builder()
                         .id(item.getId())
                         .name(item.getName())
                         .description(item.getDescription())
                         .available(item.getAvailable())
-                        .requestId(request.getId())
+                        .requestId(item.getRequestId())
+                        .ownerId(item.getUserId())
                         .build())
-                .collect(Collectors.toList());
+                .collect(Collectors.groupingBy(ItemDataForRequestDto::getRequestId));
+    }
+
+    private RequestDtoResponseWithMD buildResponseWithItems(ItemRequest request,
+            Map<Long, List<ItemDataForRequestDto>> itemsByRequestId
+    ) {
+        List<ItemDataForRequestDto> items = itemsByRequestId.getOrDefault(
+                request.getId(),
+                Collections.emptyList()
+        );
 
         return RequestDtoResponseWithMD.builder()
                 .id(request.getId())
                 .description(request.getDescription())
                 .created(request.getCreated())
+                .ownerId(request.getRequester().getId())
                 .items(items)
                 .build();
     }

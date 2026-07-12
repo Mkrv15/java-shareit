@@ -15,4 +15,5 @@ public class RequestDtoResponseWithMD {
     private String description;
     private LocalDateTime created;
     private List<ItemDataForRequestDto> items;
+    private Long ownerId;
 }

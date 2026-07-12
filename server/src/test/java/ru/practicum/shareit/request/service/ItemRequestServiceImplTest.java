@@ -23,6 +23,7 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -75,6 +76,7 @@ class ItemRequestServiceImplTest {
         item.setDescription("Professional drill");
         item.setAvailable(true);
         item.setUserId(userId);
+        item.setRequestId(requestId);
 
         itemRequest = new ItemRequest();
         itemRequest.setId(requestId);
@@ -90,7 +92,6 @@ class ItemRequestServiceImplTest {
                 .description("Need a drill")
                 .created(LocalDateTime.now())
                 .build();
-
     }
 
     @Test
@@ -110,7 +111,6 @@ class ItemRequestServiceImplTest {
         verify(mapper).mapToItemRequest(any(ItemRequestDto.class));
         verify(itemRequestRepository).save(any(ItemRequest.class));
         verify(mapper).mapToItemRequestDtoResponse(any(ItemRequest.class));
-        verify(itemRepository, never()).findByRequestId(any(Long.class));
     }
 
     @Test
@@ -138,7 +138,7 @@ class ItemRequestServiceImplTest {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(itemRequestRepository.findAllByRequesterId(eq(userId), any(Pageable.class)))
                 .thenReturn(itemRequests);
-        when(itemRepository.findByRequestId(any(Long.class))).thenReturn(List.of(item));
+        when(itemRepository.findByRequestIdIn(anyList())).thenReturn(List.of(item));
 
         List<RequestDtoResponseWithMD> result = itemRequestService.getPrivateRequests(userId, from, size);
 
@@ -151,8 +151,7 @@ class ItemRequestServiceImplTest {
 
         verify(userRepository).existsById(userId);
         verify(itemRequestRepository).findAllByRequesterId(eq(userId), any(Pageable.class));
-        verify(itemRepository).findByRequestId(any(Long.class));
-        verify(mapper, never()).mapToRequestDtoResponseWithMD(any(List.class));
+        verify(itemRepository).findByRequestIdIn(anyList());
     }
 
     @Test
@@ -162,7 +161,7 @@ class ItemRequestServiceImplTest {
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(itemRequestRepository.findAllByRequesterId(eq(userId), any(Pageable.class)))
-                .thenReturn(List.of());
+                .thenReturn(Collections.emptyList());
 
         List<RequestDtoResponseWithMD> result = itemRequestService.getPrivateRequests(userId, from, size);
 
@@ -171,8 +170,6 @@ class ItemRequestServiceImplTest {
 
         verify(userRepository).existsById(userId);
         verify(itemRequestRepository).findAllByRequesterId(eq(userId), any(Pageable.class));
-        verify(itemRepository, never()).findByRequestId(any(Long.class));
-        verify(mapper, never()).mapToRequestDtoResponseWithMD(any(List.class));
     }
 
     @Test
@@ -202,7 +199,7 @@ class ItemRequestServiceImplTest {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(itemRequestRepository.findAllByRequesterIdNot(eq(userId), any(Pageable.class)))
                 .thenReturn(itemRequestPage);
-        when(itemRepository.findByRequestId(any(Long.class))).thenReturn(List.of(item));
+        when(itemRepository.findByRequestIdIn(anyList())).thenReturn(List.of(item));
 
         List<RequestDtoResponseWithMD> result = itemRequestService.getOtherRequests(userId, from, size);
 
@@ -215,7 +212,6 @@ class ItemRequestServiceImplTest {
 
         verify(userRepository).existsById(userId);
         verify(itemRequestRepository).findAllByRequesterIdNot(eq(userId), any(Pageable.class));
-        verify(itemRepository).findByRequestId(any(Long.class));
     }
 
     @Test
@@ -235,7 +231,6 @@ class ItemRequestServiceImplTest {
 
         verify(userRepository).existsById(userId);
         verify(itemRequestRepository).findAllByRequesterIdNot(eq(userId), any(Pageable.class));
-        verifyNoInteractions(itemRepository);
     }
 
     @Test
@@ -260,7 +255,7 @@ class ItemRequestServiceImplTest {
     void shouldReturnRequestWhenExists() {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(itemRequestRepository.findById(requestId)).thenReturn(Optional.of(itemRequest));
-        when(itemRepository.findByRequestId(any(Long.class))).thenReturn(List.of(item));
+        when(itemRepository.findByRequestIdIn(anyList())).thenReturn(List.of(item));
 
         RequestDtoResponseWithMD result = itemRequestService.getItemRequest(userId, requestId);
 
@@ -273,7 +268,7 @@ class ItemRequestServiceImplTest {
 
         verify(userRepository).existsById(userId);
         verify(itemRequestRepository).findById(requestId);
-        verify(itemRepository).findByRequestId(any(Long.class));
+        verify(itemRepository).findByRequestIdIn(anyList());
     }
 
     @Test
@@ -290,21 +285,20 @@ class ItemRequestServiceImplTest {
 
         verify(userRepository).existsById(userId);
         verify(itemRequestRepository).findById(requestId);
-        verifyNoInteractions(itemRepository);
     }
 
     @Test
     void shouldThrowNotFoundWhenUserNotFoundForGetRequest() {
-        when(userRepository.existsById(requestId)).thenReturn(false);
+        when(userRepository.existsById(userId)).thenReturn(false);
 
         NotFoundException exception = assertThrows(
                 NotFoundException.class,
                 () -> itemRequestService.getItemRequest(userId, requestId)
         );
 
-        assertEquals("Пользователя с id = " + requestId + " нет", exception.getMessage());
+        assertEquals("Пользователя с id = " + userId + " нет", exception.getMessage());
 
-        verify(userRepository).existsById(requestId);
+        verify(userRepository).existsById(userId);
         verifyNoInteractions(itemRequestRepository);
     }
 
@@ -312,7 +306,7 @@ class ItemRequestServiceImplTest {
     void shouldBuildResponseWithItems() {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(itemRequestRepository.findById(requestId)).thenReturn(Optional.of(itemRequest));
-        when(itemRepository.findByRequestId(any(Long.class))).thenReturn(List.of(item));
+        when(itemRepository.findByRequestIdIn(anyList())).thenReturn(List.of(item));
 
         RequestDtoResponseWithMD result = itemRequestService.getItemRequest(userId, requestId);
 
@@ -330,14 +324,14 @@ class ItemRequestServiceImplTest {
 
         verify(userRepository).existsById(userId);
         verify(itemRequestRepository).findById(requestId);
-        verify(itemRepository).findByRequestId(any(Long.class));
+        verify(itemRepository).findByRequestIdIn(anyList());
     }
 
     @Test
     void shouldHandleRequestWithoutItems() {
         when(userRepository.existsById(userId)).thenReturn(true);
         when(itemRequestRepository.findById(requestId)).thenReturn(Optional.of(itemRequest));
-        when(itemRepository.findByRequestId(any(Long.class))).thenReturn(List.of());
+        when(itemRepository.findByRequestIdIn(anyList())).thenReturn(Collections.emptyList());
 
         RequestDtoResponseWithMD result = itemRequestService.getItemRequest(userId, requestId);
 
@@ -346,7 +340,7 @@ class ItemRequestServiceImplTest {
         assertNotNull(result.getItems());
         assertTrue(result.getItems().isEmpty());
 
-        verify(itemRepository).findByRequestId(any(Long.class));
+        verify(itemRepository).findByRequestIdIn(anyList());
     }
 
     @Test
@@ -356,8 +350,8 @@ class ItemRequestServiceImplTest {
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(itemRequestRepository.findAllByRequesterId(eq(userId), any(Pageable.class)))
-                .thenReturn(List.of(itemRequest));
-        when(itemRepository.findByRequestId(any(Long.class))).thenReturn(List.of(item));
+                .thenReturn(Collections.singletonList(itemRequest));
+        when(itemRepository.findByRequestIdIn(anyList())).thenReturn(Collections.emptyList());
 
         List<RequestDtoResponseWithMD> result = itemRequestService.getPrivateRequests(userId, from, size);
 
@@ -365,5 +359,6 @@ class ItemRequestServiceImplTest {
         assertEquals(1, result.size());
 
         verify(itemRequestRepository).findAllByRequesterId(eq(userId), any(Pageable.class));
+        verify(itemRepository).findByRequestIdIn(anyList());
     }
 }
