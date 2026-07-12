@@ -241,7 +241,6 @@ class BookingControllerTest {
 
     @Test
     void should400BadRequestWithoutState() throws Exception {
-        // when & then
         mockMvc.perform(get("/bookings")
                         .header("X-Sharer-User-Id", userId))
                 .andExpect(status().isOk());
